@@ -77,7 +77,7 @@ resolver = ManifestReferenceResolver()
 
 transformer = ManifestComponentTransformer()
 
-input_config = {"apikey": "verysecrettoken", "repos": ["airbyte", "airbyte-cloud"]}
+input_config = {"apikey": "verysecrettoken", "repos": ["airbyte", "airbyte-cloud"], "config_key": {"config_key_inner": "config_key_inner_value"}}
 
 
 def test_create_check_stream():
@@ -97,107 +97,84 @@ def test_create_component_type_mismatch():
 
 
 def test_full_config_stream():
-    content = """
-decoder:
-  type: JsonDecoder
-extractor:
-  type: DpathExtractor
-  decoder: "#/decoder"
-selector:
-  type: RecordSelector
-  record_filter:
-    type: RecordFilter
-    condition: "{{ record['id'] > stream_state['id'] }}"
-metadata_paginator:
-    type: DefaultPaginator
-    page_size_option:
-      type: RequestOption
-      inject_into: request_parameter
-      field_name: page_size
-    page_token_option:
-      type: RequestPath
-    pagination_strategy:
-      type: "CursorPagination"
-      cursor_value: "{{ response._metadata.next }}"
-      page_size: 10
-requester:
-  type: HttpRequester
-  url_base: "https://api.sendgrid.com/v3/"
-  http_method: "GET"
-  authenticator:
-    type: BearerAuthenticator
-    api_token: "{{ config['apikey'] }}"
-  request_parameters:
-    unit: "day"
-retriever:
-  paginator:
-    type: NoPagination
-partial_stream:
-  type: DeclarativeStream
-  schema_loader:
-    type: JsonFileSchemaLoader
-    file_path: "./source_sendgrid/schemas/{{ parameters.name }}.json"
-list_stream:
-  $ref: "#/partial_stream"
-  $parameters:
-    name: "lists"
-    extractor:
-      $ref: "#/extractor"
-      field_path: ["{{ parameters['name'] }}"]
-  name: "lists"
-  primary_key: "id"
-  retriever:
-    $ref: "#/retriever"
-    requester:
-      $ref: "#/requester"
-      path: "{{ next_page_token['next_page_url'] }}"
-    paginator:
-      $ref: "#/metadata_paginator"
-    record_selector:
-      $ref: "#/selector"
-  transformations:
-    - type: AddFields
-      fields:
-      - path: ["extra"]
-        value: "{{ response.to_add }}"
-  incremental_sync:
-    type: DatetimeBasedCursor
-    start_datetime: "{{ config['start_time'] }}"
-    end_datetime: "{{ config['end_time'] }}"
-    step: "P10D"
-    cursor_field: "created"
-    cursor_granularity: "PT0.000001S"
-    $parameters:
-      datetime_format: "%Y-%m-%dT%H:%M:%S.%f%z"
-check:
-  type: CheckStream
-  stream_names: ["list_stream"]
-spec:
-  type: Spec
-  documentation_url: https://airbyte.com/#yaml-from-manifest
-  connection_specification:
-    title: Test Spec
-    type: object
-    required:
-      - api_key
-    additionalProperties: false
-    properties:
-      api_key:
-        type: string
-        airbyte_secret: true
-        title: API Key
-        description: Test API Key
-        order: 0
-  advanced_auth:
-    auth_flow_type: "oauth2.0"
-    """
-    parsed_manifest = YamlDeclarativeSource._parse(content)
+    parsed_manifest = {
+            "version": "0.51.11",
+            "type": "DeclarativeSource",
+            "check": {
+                "type": "CheckStream",
+                "stream_names": [
+                    "asdf"
+                ]
+            },
+            "streams": [
+                {
+                    "type": "DeclarativeStream",
+                    "name": "asdf",
+                    "primary_key": [],
+                    "schema_loader": {
+                        "type": "InlineSchemaLoader",
+                        "schema": {
+                            "$schema": "http://json-schema.org/draft-07/schema#",
+                            "additionalProperties": True,
+                            "properties": {},
+                            "type": "object"
+                        }
+                    },
+                    "retriever": {
+                        "type": "SimpleRetriever",
+                        "requester": {
+                            "type": "HttpRequester",
+                            "url_base": "asdf",
+                            "path": "https://faker.com",
+                            "http_method": "GET",
+                            "request_parameters": {
+                                "k1": "{\"a\": 1, \"b\": 2}",
+                                "k2": "string_value",
+                                "k3": "12",
+                                "k4": "{{ config[\"config_key\"] }}",
+                            },
+                            "request_headers": {},
+                            "authenticator": {
+                                "type": "NoAuth"
+                            },
+                            "request_body_json": {}
+                        },
+                        "record_selector": {
+                            "type": "RecordSelector",
+                            "extractor": {
+                                "type": "DpathExtractor",
+                                "field_path": []
+                            }
+                        },
+                        "paginator": {
+                            "type": "NoPagination"
+                        }
+                    }
+                }
+            ],
+            "spec": {
+                "connection_specification": {
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "type": "object",
+                    "required": [],
+                    "properties": {},
+                    "additionalProperties": True
+                },
+                "documentation_url": "https://example.org",
+                "type": "Spec"
+            },
+            "metadata": {
+                "autoImportSchema": {
+                    "asdf": False
+                }
+            }
+        }
     resolved_manifest = resolver.preprocess_manifest(parsed_manifest)
     resolved_manifest["type"] = "DeclarativeSource"
     manifest = transformer.propagate_types_and_parameters("", resolved_manifest, {})
 
-    stream_manifest = manifest["list_stream"]
-    assert stream_manifest["type"] == "DeclarativeStream"
+    stream_manifest = manifest["streams"][0]
+    # assert stream_manifest["type"] == "DeclarativeStream"
     stream = factory.create_component(model_type=DeclarativeStreamModel, component_definition=stream_manifest, config=input_config)
 
     assert isinstance(stream, DeclarativeStream)

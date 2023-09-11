@@ -69,7 +69,7 @@ class InterpolatedRequestOptionsProvider(RequestOptionsProvider):
         stream_slice: Optional[StreamSlice] = None,
         next_page_token: Optional[Mapping[str, Any]] = None,
     ) -> MutableMapping[str, Any]:
-        interpolated_value = self._parameter_interpolator.eval_request_inputs(stream_state, stream_slice, next_page_token)
+        interpolated_value = self._parameter_interpolator.eval_request_inputs(stream_state, stream_slice, next_page_token, valid_types=(str, list))
         if isinstance(interpolated_value, dict):
             return interpolated_value
         return {}
@@ -81,7 +81,8 @@ class InterpolatedRequestOptionsProvider(RequestOptionsProvider):
         stream_slice: Optional[StreamSlice] = None,
         next_page_token: Optional[Mapping[str, Any]] = None,
     ) -> Mapping[str, Any]:
-        return self._headers_interpolator.eval_request_inputs(stream_state, stream_slice, next_page_token)
+        head = self._headers_interpolator.eval_request_inputs(stream_state, stream_slice, next_page_token, valid_types=(str, list))
+        return head
 
     def get_request_body_data(
         self,
@@ -90,7 +91,7 @@ class InterpolatedRequestOptionsProvider(RequestOptionsProvider):
         stream_slice: Optional[StreamSlice] = None,
         next_page_token: Optional[Mapping[str, Any]] = None,
     ) -> Optional[Union[Mapping, str]]:
-        return self._body_data_interpolator.eval_request_inputs(stream_state, stream_slice, next_page_token)
+        return self._body_data_interpolator.eval_request_inputs(stream_state, stream_slice, next_page_token, valid_types=(str, list))
 
     def get_request_body_json(
         self,

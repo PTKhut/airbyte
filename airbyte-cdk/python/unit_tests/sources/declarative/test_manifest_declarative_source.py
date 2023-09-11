@@ -140,67 +140,75 @@ class TestManifestDeclarativeSource:
 
     def test_manifest_with_spec(self):
         manifest = {
-            "version": "0.29.3",
-            "definitions": {
-                "schema_loader": {
-                    "name": "{{ parameters.stream_name }}",
-                    "file_path": "./source_sendgrid/schemas/{{ parameters.name }}.yaml",
-                },
-                "retriever": {
-                    "paginator": {
-                        "type": "DefaultPaginator",
-                        "page_size": 10,
-                        "page_size_option": {"type": "RequestOption", "inject_into": "request_parameter", "field_name": "page_size"},
-                        "page_token_option": {"type": "RequestPath"},
-                        "pagination_strategy": {"type": "CursorPagination", "cursor_value": "{{ response._metadata.next }}"},
-                    },
-                    "requester": {
-                        "path": "/v3/marketing/lists",
-                        "authenticator": {"type": "BearerAuthenticator", "api_token": "{{ config.apikey }}"},
-                        "request_parameters": {"page_size": "{{ 10 }}"},
-                    },
-                    "record_selector": {"extractor": {"field_path": ["result"]}},
-                },
+            "version": "0.51.11",
+            "type": "DeclarativeSource",
+            "check": {
+                "type": "CheckStream",
+                "stream_names": [
+                    "asdf"
+                ]
             },
             "streams": [
                 {
                     "type": "DeclarativeStream",
-                    "$parameters": {"name": "lists", "primary_key": "id", "url_base": "https://api.sendgrid.com"},
+                    "name": "asdf",
+                    "primary_key": [],
                     "schema_loader": {
-                        "name": "{{ parameters.stream_name }}",
-                        "file_path": "./source_sendgrid/schemas/{{ parameters.name }}.yaml",
+                        "type": "InlineSchemaLoader",
+                        "schema": {
+                            "$schema": "http://json-schema.org/draft-07/schema#",
+                            "additionalProperties": True,
+                            "properties": {},
+                            "type": "object"
+                        }
                     },
                     "retriever": {
-                        "paginator": {
-                            "type": "DefaultPaginator",
-                            "page_size": 10,
-                            "page_size_option": {"type": "RequestOption", "inject_into": "request_parameter", "field_name": "page_size"},
-                            "page_token_option": {"type": "RequestPath"},
-                            "pagination_strategy": {"type": "CursorPagination", "cursor_value": "{{ response._metadata.next }}"},
-                        },
+                        "type": "SimpleRetriever",
                         "requester": {
-                            "path": "/v3/marketing/lists",
-                            "authenticator": {"type": "BearerAuthenticator", "api_token": "{{ config.apikey }}"},
-                            "request_parameters": {"page_size": "{{ 10 }}"},
+                            "type": "HttpRequester",
+                            "url_base": "asdf",
+                            "path": "https://faker.com",
+                            "http_method": "GET",
+                            "request_parameters": {
+                                "k1": "{\"a\": 1, \"b\": 2}",
+                                "k2": "string_value",
+                                "k3": "12"
+                            },
+                            "request_headers": {},
+                            "authenticator": {
+                                "type": "NoAuth"
+                            },
+                            "request_body_json": {}
                         },
-                        "record_selector": {"extractor": {"field_path": ["result"]}},
-                    },
+                        "record_selector": {
+                            "type": "RecordSelector",
+                            "extractor": {
+                                "type": "DpathExtractor",
+                                "field_path": []
+                            }
+                        },
+                        "paginator": {
+                            "type": "NoPagination"
+                        }
+                    }
                 }
             ],
-            "check": {"type": "CheckStream", "stream_names": ["lists"]},
             "spec": {
-                "type": "Spec",
-                "documentation_url": "https://airbyte.com/#yaml-from-manifest",
                 "connection_specification": {
-                    "title": "Test Spec",
+                    "$schema": "http://json-schema.org/draft-07/schema#",
                     "type": "object",
-                    "required": ["api_key"],
-                    "additionalProperties": False,
-                    "properties": {
-                        "api_key": {"type": "string", "airbyte_secret": True, "title": "API Key", "description": "Test API Key", "order": 0}
-                    },
+                    "required": [],
+                    "properties": {},
+                    "additionalProperties": True
                 },
+                "documentation_url": "https://example.org",
+                "type": "Spec"
             },
+            "metadata": {
+                "autoImportSchema": {
+                    "asdf": False
+                }
+            }
         }
         source = ManifestDeclarativeSource(source_config=manifest)
         connector_specification = source.spec(logger)

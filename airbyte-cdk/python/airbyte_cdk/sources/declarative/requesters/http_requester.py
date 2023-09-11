@@ -120,9 +120,10 @@ class HttpRequester(Requester):
         stream_slice: Optional[StreamSlice] = None,
         next_page_token: Optional[Mapping[str, Any]] = None,
     ) -> MutableMapping[str, Any]:
-        return self._request_options_provider.get_request_params(
+        params = self._request_options_provider.get_request_params(
             stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token
         )
+        return params
 
     def get_request_headers(
         self,
@@ -131,9 +132,10 @@ class HttpRequester(Requester):
         stream_slice: Optional[StreamSlice] = None,
         next_page_token: Optional[Mapping[str, Any]] = None,
     ) -> Mapping[str, Any]:
-        return self._request_options_provider.get_request_headers(
+        head = self._request_options_provider.get_request_headers(
             stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token
         )
+        return head
 
     # fixing request options provider types has a lot of dependencies
     def get_request_body_data(  # type: ignore
@@ -258,7 +260,13 @@ class HttpRequester(Requester):
         )
         if isinstance(headers, str):
             raise ValueError("Request headers cannot be a string")
-        return {str(k): str(v) for k, v in headers.items()}
+        formatted_headers = {}
+        for k, v in headers.items():
+            if isinstance(v, list):
+                formatted_headers[str(k)] = ",".join([str(_v) for _v in v])
+            else:
+                formatted_headers[str(k)] = str(v)
+        return formatted_headers
 
     def _request_params(
         self,
@@ -371,7 +379,9 @@ class HttpRequester(Requester):
             elif data:
                 args["data"] = data
 
-        return self._session.prepare_request(requests.Request(**args))
+        req = requests.Request(**args)
+        preq = self._session.prepare_request(req)
+        return preq
 
     def send_request(
         self,

@@ -687,7 +687,7 @@ class ModelToComponentFactory:
             model.http_method if isinstance(model.http_method, str) else model.http_method.value if model.http_method is not None else "GET"
         )
 
-        return HttpRequester(
+        req = HttpRequester(
             name=name,
             url_base=model.url_base,
             path=model.path,
@@ -700,6 +700,7 @@ class ModelToComponentFactory:
             parameters=model.parameters or {},
             message_repository=self._message_repository,
         )
+        return req
 
     @staticmethod
     def create_http_response_filter(model: HttpResponseFilterModel, config: Config, **kwargs: Any) -> HttpResponseFilter:
