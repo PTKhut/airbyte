@@ -12,6 +12,7 @@ import io.airbyte.integrations.base.destination.typing_deduping.AirbyteProtocolT
 import io.airbyte.integrations.base.destination.typing_deduping.AirbyteType;
 import io.airbyte.integrations.base.destination.typing_deduping.Array;
 import io.airbyte.integrations.base.destination.typing_deduping.ColumnId;
+import io.airbyte.integrations.base.destination.typing_deduping.ReservedKeywords;
 import io.airbyte.integrations.base.destination.typing_deduping.SqlGenerator;
 import io.airbyte.integrations.base.destination.typing_deduping.StreamConfig;
 import io.airbyte.integrations.base.destination.typing_deduping.StreamId;
@@ -515,7 +516,11 @@ public class SnowflakeSqlGenerator implements SqlGenerator<SnowflakeTableDefinit
                 """);
   }
 
-  public static String escapeIdentifier(final String identifier) {
+  public static String escapeIdentifier(String identifier) {
+    if (ReservedKeywords.SNOWFLAKE.contains(identifier.toUpperCase())) {
+      identifier = "_" + identifier;
+    }
+
     // Note that we don't need to escape backslashes here!
     // The only special character in an identifier is the double-quote, which needs to be doubled.
     return identifier.replace("\"", "\"\"");
